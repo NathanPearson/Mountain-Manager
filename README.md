@@ -78,6 +78,8 @@ Open the app:
 http://localhost:5173
 ```
 
+On first launch, choose **Register** to create a local account, then use that account to sign in and manage tasks.
+
 ## Running Locally On macOS Or Linux
 
 From the repository root, start the API:
