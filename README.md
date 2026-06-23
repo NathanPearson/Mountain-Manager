@@ -10,6 +10,7 @@ Users can register, sign in, and manage their own tasks. The task workflow suppo
 
 - Create, edit, complete/incomplete, delete, and list flows
 - Required title and due date fields with inline validation
+- Per-user unique task titles with clear duplicate-title validation
 - Priority values: `Low`, `Medium`, `High`, `Urgent`
 - Due-date buckets: `Overdue`, `Today`, `Upcoming`, `Completed`
 - Filters for status, priority, and due-date bucket

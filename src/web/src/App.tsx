@@ -73,6 +73,19 @@ function requiredMessage(field: string) {
   return `${field} is required.`
 }
 
+function getTaskFormErrors(details: Record<string, string[]>) {
+  const errors: Partial<Record<keyof TaskFormValues, string>> = {}
+
+  for (const key of ['title', 'description', 'priority', 'dueDate'] as const) {
+    const message = details[key]?.[0]
+    if (message) {
+      errors[key] = message
+    }
+  }
+
+  return errors
+}
+
 function App() {
   const [session, setSession] = useState<AuthResponse | null>(() => getStoredSession())
   const [tasks, setTasks] = useState<TaskItem[]>([])
@@ -148,6 +161,10 @@ function App() {
       setEditingTask(null)
       await loadTasks()
     } catch (error) {
+      if (error instanceof ApiClientError && error.apiError.details) {
+        setFormErrors((current) => ({ ...current, ...getTaskFormErrors(error.apiError.details ?? {}) }))
+      }
+
       setMessage(getErrorMessage(error))
     } finally {
       setIsLoading(false)

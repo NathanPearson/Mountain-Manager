@@ -40,6 +40,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(task => task.UpdatedAt).HasConversion(instantConverter);
             entity.Property(task => task.CompletedAt).HasConversion(instantConverter);
             entity.HasIndex(task => new { task.UserId, task.DueDate, task.PriorityId });
+            entity.HasIndex(task => new { task.UserId, task.Title }).IsUnique();
             entity.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(task => task.UserId)

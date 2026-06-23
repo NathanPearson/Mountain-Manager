@@ -122,6 +122,18 @@ public static class TaskEndpoints
                 httpContext.TraceIdentifier);
         }
 
+        if (await TitleExistsAsync(db, currentUser.Id, request.Title))
+        {
+            logger.LogWarning("Task create duplicate title validation failed for user {UserId}.", currentUser.Id);
+            return ApiResults.Error(
+                StatusCodes.Status400BadRequest,
+                ApiError.Validation(new Dictionary<string, string[]>
+                {
+                    ["title"] = ["A task with this title already exists."]
+                }),
+                httpContext.TraceIdentifier);
+        }
+
         var now = clock.GetCurrentInstant();
         var task = new TaskItem
         {
@@ -192,6 +204,18 @@ public static class TaskEndpoints
         {
             logger.LogWarning("Task update ownership/not-found failure for user {UserId}. TaskId: {TaskId}", currentUser.Id, id);
             return ApiResults.Error(StatusCodes.Status404NotFound, ApiError.NotFound("Task was not found."), httpContext.TraceIdentifier);
+        }
+
+        if (await TitleExistsAsync(db, currentUser.Id, request.Title, id))
+        {
+            logger.LogWarning("Task update duplicate title validation failed for user {UserId}. TaskId: {TaskId}", currentUser.Id, id);
+            return ApiResults.Error(
+                StatusCodes.Status400BadRequest,
+                ApiError.Validation(new Dictionary<string, string[]>
+                {
+                    ["title"] = ["A task with this title already exists."]
+                }),
+                httpContext.TraceIdentifier);
         }
 
         task.Title = request.Title.Trim();
@@ -325,5 +349,14 @@ public static class TaskEndpoints
     {
         var normalized = priority.Trim();
         return await db.TaskPriorities.SingleOrDefaultAsync(item => item.Name == normalized);
+    }
+
+    private static async Task<bool> TitleExistsAsync(AppDbContext db, Guid userId, string title, Guid? exceptTaskId = null)
+    {
+        var normalizedTitle = title.Trim().ToLowerInvariant();
+        return await db.Tasks.AnyAsync(task =>
+            task.UserId == userId
+            && (!exceptTaskId.HasValue || task.Id != exceptTaskId.Value)
+            && task.Title.ToLower() == normalizedTitle);
     }
 }

@@ -99,6 +99,60 @@ public sealed class TaskApiTests(ApiTestFactory factory) : IClassFixture<ApiTest
     }
 
     [Fact]
+    public async Task CreateTaskRejectsDuplicateTitleForSameUser()
+    {
+        await AuthenticateAsync("duplicate-title@example.com");
+
+        await _client.PostAsJsonAsync("/api/tasks", new
+        {
+            title = "Schedule labs",
+            description = "Original",
+            priority = "Medium",
+            dueDate = "2030-06-20"
+        });
+
+        var response = await _client.PostAsJsonAsync("/api/tasks", new
+        {
+            title = " schedule labs ",
+            description = "Duplicate with different casing and whitespace",
+            priority = "High",
+            dueDate = "2030-06-21"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var envelope = await response.ReadEnvelopeAsync<object>();
+        envelope.Success.Should().BeFalse();
+        envelope.Error!.Code.Should().Be("VALIDATION_ERROR");
+        envelope.Error.Details.Should().ContainKey("title");
+        envelope.Error.Details!["title"].Should().Contain("A task with this title already exists.");
+    }
+
+    [Fact]
+    public async Task CreateTaskAllowsSameTitleForDifferentUsers()
+    {
+        await AuthenticateAsync("duplicate-owner@example.com");
+
+        await _client.PostAsJsonAsync("/api/tasks", new
+        {
+            title = "Shared task title",
+            priority = "Medium",
+            dueDate = "2030-06-20"
+        });
+
+        await AuthenticateAsync("duplicate-other-user@example.com");
+
+        var response = await _client.PostAsJsonAsync("/api/tasks", new
+        {
+            title = "Shared task title",
+            priority = "Medium",
+            dueDate = "2030-06-20"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
     public async Task PrioritiesAreStoredAsLookupRowsAndTasksReferencePriorityId()
     {
         await AuthenticateAsync("priority-lookup@example.com");
@@ -309,6 +363,44 @@ public sealed class TaskApiTests(ApiTestFactory factory) : IClassFixture<ApiTest
 
         var getAfterDelete = await _client.GetAsync($"/api/tasks/{created.Id}");
         getAfterDelete.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateTaskRejectsDuplicateTitleForSameUser()
+    {
+        await AuthenticateAsync("duplicate-update@example.com");
+
+        await _client.PostAsJsonAsync("/api/tasks", new
+        {
+            title = "Existing title",
+            priority = "Medium",
+            dueDate = "2030-06-20"
+        });
+
+        var createResponse = await _client.PostAsJsonAsync("/api/tasks", new
+        {
+            title = "Title to update",
+            priority = "Low",
+            dueDate = "2030-06-21"
+        });
+
+        var created = (await createResponse.ReadEnvelopeAsync<TaskResponse>()).Data!;
+
+        var updateResponse = await _client.PutAsJsonAsync($"/api/tasks/{created.Id}", new
+        {
+            title = " existing title ",
+            description = "Should fail",
+            priority = "Low",
+            dueDate = "2030-06-22"
+        });
+
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var envelope = await updateResponse.ReadEnvelopeAsync<object>();
+        envelope.Success.Should().BeFalse();
+        envelope.Error!.Code.Should().Be("VALIDATION_ERROR");
+        envelope.Error.Details.Should().ContainKey("title");
+        envelope.Error.Details!["title"].Should().Contain("A task with this title already exists.");
     }
 
     [Fact]
