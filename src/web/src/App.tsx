@@ -39,6 +39,7 @@ const priorities: Priority[] = ['Low', 'Medium', 'High', 'Urgent']
 const dueBuckets: DueBucket[] = ['Overdue', 'Today', 'Upcoming', 'Completed']
 const dueBucketFilters: DueBucketFilter[] = ['all', 'Overdue', 'Today', 'Upcoming', 'Completed']
 const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+const isoDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/
 
 const emptyForm: TaskFormValues = {
   title: '',
@@ -127,7 +128,8 @@ function App() {
     setIsLoading(true)
     setMessage(null)
 
-    const nextErrors = validateTaskForm(form)
+    const dueDateInput = event.currentTarget.elements.namedItem('dueDate') as HTMLInputElement | null
+    const nextErrors = validateTaskForm(form, Boolean(dueDateInput?.validity.badInput))
     setFormErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) {
       setIsLoading(false)
@@ -294,6 +296,7 @@ function App() {
                   Due Date <strong aria-hidden="true">*</strong>
                 </span>
                 <input
+                  name="dueDate"
                   type="date"
                   value={form.dueDate}
                   aria-invalid={Boolean(formErrors.dueDate)}
@@ -502,18 +505,36 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (session: AuthRespon
   )
 }
 
-function validateTaskForm(values: TaskFormValues) {
+function validateTaskForm(values: TaskFormValues, hasInvalidDueDateInput = false) {
   const errors: Partial<Record<keyof TaskFormValues, string>> = {}
 
   if (!values.title.trim()) {
     errors.title = requiredMessage('Title')
   }
 
-  if (!values.dueDate) {
+  if (hasInvalidDueDateInput) {
+    errors.dueDate = 'Enter a valid due date.'
+  } else if (!values.dueDate) {
     errors.dueDate = requiredMessage('Due date')
+  } else if (!isValidIsoDate(values.dueDate)) {
+    errors.dueDate = 'Enter a valid due date.'
   }
 
   return errors
+}
+
+function isValidIsoDate(value: string) {
+  const match = isoDatePattern.exec(value)
+  if (!match) {
+    return false
+  }
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const parsed = new Date(Date.UTC(year, month - 1, day))
+
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day
 }
 
 function validateAuthForm(email: string, password: string) {
