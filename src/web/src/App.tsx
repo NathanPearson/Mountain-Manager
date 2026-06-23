@@ -38,6 +38,7 @@ import './styles.css'
 const priorities: Priority[] = ['Low', 'Medium', 'High', 'Urgent']
 const dueBuckets: DueBucket[] = ['Overdue', 'Today', 'Upcoming', 'Completed']
 const dueBucketFilters: DueBucketFilter[] = ['all', 'Overdue', 'Today', 'Upcoming', 'Completed']
+const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
 const emptyForm: TaskFormValues = {
   title: '',
@@ -520,6 +521,8 @@ function validateAuthForm(email: string, password: string) {
 
   if (!email.trim()) {
     errors.email = requiredMessage('Email')
+  } else if (!emailPattern.test(email.trim())) {
+    errors.email = 'Enter a valid email address.'
   }
 
   if (!password) {

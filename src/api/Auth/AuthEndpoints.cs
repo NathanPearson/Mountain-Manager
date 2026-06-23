@@ -2,11 +2,16 @@ using Microsoft.EntityFrameworkCore;
 using MountainManager.Api.Common;
 using MountainManager.Api.Data;
 using NodaTime;
+using System.Text.RegularExpressions;
 
 namespace MountainManager.Api.Auth;
 
 public static class AuthEndpoints
 {
+    private static readonly Regex EmailPattern = new(
+        @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
     public static RouteGroupBuilder MapAuthEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/auth").WithTags("Auth");
@@ -109,7 +114,7 @@ public static class AuthEndpoints
     {
         var errors = new Dictionary<string, string[]>();
 
-        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+        if (string.IsNullOrWhiteSpace(email) || !EmailPattern.IsMatch(email))
         {
             errors["email"] = ["A valid email is required."];
         }

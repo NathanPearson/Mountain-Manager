@@ -29,6 +29,39 @@ public sealed class AuthApiTests(ApiTestFactory factory) : IClassFixture<ApiTest
     }
 
     [Fact]
+    public async Task RegisterRejectsEmailWithoutDomainSuffix()
+    {
+        var response = await _client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email = "person@example",
+            password = "Password123!"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var envelope = await response.ReadEnvelopeAsync<object>();
+        envelope.Success.Should().BeFalse();
+        envelope.Error!.Code.Should().Be("VALIDATION_ERROR");
+        envelope.Error.Details.Should().ContainKey("email");
+    }
+
+    [Fact]
+    public async Task RegisterAllowsNonComDomainSuffixes()
+    {
+        var response = await _client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email = "person@example.health",
+            password = "Password123!"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var envelope = await response.ReadEnvelopeAsync<AuthResponse>();
+        envelope.Success.Should().BeTrue();
+        envelope.Data!.User.Email.Should().Be("person@example.health");
+    }
+
+    [Fact]
     public async Task RegisterRejectsMissingEmailWithoutThrowing()
     {
         var response = await _client.PostAsJsonAsync("/api/auth/register", new
