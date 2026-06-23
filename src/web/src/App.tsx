@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   CalendarClock,
   Check,
-  Circle,
   LogOut,
   Pencil,
   Plus,
@@ -38,7 +37,7 @@ import './styles.css'
 
 const priorities: Priority[] = ['Low', 'Medium', 'High', 'Urgent']
 const dueBuckets: DueBucket[] = ['Overdue', 'Today', 'Upcoming', 'Completed']
-const dueBucketFilters: DueBucketFilter[] = ['all', 'Overdue', 'Today', 'Upcoming']
+const dueBucketFilters: DueBucketFilter[] = ['all', 'Overdue', 'Today', 'Upcoming', 'Completed']
 
 const emptyForm: TaskFormValues = {
   title: '',
@@ -207,10 +206,10 @@ function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow">Mountain Manager</p>
-          <h1>Tasks</h1>
+          <h1>Mountains</h1>
         </div>
         <div className="user-menu">
-          <span>{session.user.email}</span>
+          <span className="user-email">{session.user.email}</span>
           <button className="icon-button" type="button" onClick={signOut} aria-label="Sign out" title="Sign out">
             <LogOut size={18} />
           </button>
@@ -245,7 +244,7 @@ function App() {
             ) : null}
           </div>
 
-          <form className="task-form" onSubmit={handleSubmitTask}>
+          <form className="task-form" onSubmit={handleSubmitTask} noValidate>
             <label className={formErrors.title ? 'field has-error' : 'field'}>
               <span>
                 Title <strong aria-hidden="true">*</strong>
@@ -435,7 +434,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (session: AuthRespon
           </div>
         ) : null}
 
-        <form className="task-form" onSubmit={handleSubmit}>
+        <form className="task-form" onSubmit={handleSubmit} noValidate>
           <label className={fieldErrors.email ? 'field has-error' : 'field'}>
             <span>
               Email <strong aria-hidden="true">*</strong>
@@ -560,7 +559,7 @@ function TaskBucket({
               aria-label={task.isCompleted ? 'Mark task incomplete' : 'Mark task complete'}
               title={task.isCompleted ? 'Mark incomplete' : 'Mark complete'}
             >
-              {task.isCompleted ? <Check size={18} /> : <Circle size={18} />}
+              <Check size={18} />
             </button>
 
             <div className="task-content">

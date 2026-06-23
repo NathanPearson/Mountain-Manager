@@ -28,7 +28,7 @@ public static class AuthEndpoints
         HttpContext httpContext)
     {
         var logger = loggerFactory.CreateLogger("Auth");
-        var email = request.Email.Trim().ToLowerInvariant();
+        var email = NormalizeEmail(request.Email);
 
         logger.LogInformation("Registration attempt for email {Email}.", email);
 
@@ -49,7 +49,7 @@ public static class AuthEndpoints
         {
             Id = Guid.NewGuid(),
             Email = email,
-            PasswordHash = passwordHasher.Hash(request.Password),
+            PasswordHash = passwordHasher.Hash(request.Password!),
             CreatedAt = clock.GetCurrentInstant()
         };
 
@@ -71,12 +71,19 @@ public static class AuthEndpoints
         HttpContext httpContext)
     {
         var logger = loggerFactory.CreateLogger("Auth");
-        var email = request.Email.Trim().ToLowerInvariant();
+        var email = NormalizeEmail(request.Email);
 
         logger.LogInformation("Login attempt for email {Email}.", email);
 
+        var validationErrors = ValidateCredentials(email, request.Password);
+        if (validationErrors.Count > 0)
+        {
+            logger.LogWarning("Login validation failed for email {Email}.", email);
+            return ApiResults.Error(StatusCodes.Status400BadRequest, ApiError.Validation(validationErrors), httpContext.TraceIdentifier);
+        }
+
         var user = await db.Users.SingleOrDefaultAsync(user => user.Email == email);
-        if (user is null || !passwordHasher.Verify(request.Password, user.PasswordHash))
+        if (user is null || !passwordHasher.Verify(request.Password!, user.PasswordHash))
         {
             logger.LogWarning("Login failed for email {Email}.", email);
             return ApiResults.Error(StatusCodes.Status401Unauthorized, ApiError.Unauthorized("Invalid email or password."), httpContext.TraceIdentifier);
@@ -93,7 +100,12 @@ public static class AuthEndpoints
         return ApiResults.Ok(new UserResponse(currentUser.Id, currentUser.Email ?? string.Empty), httpContext.TraceIdentifier);
     }
 
-    private static Dictionary<string, string[]> ValidateCredentials(string email, string password)
+    private static string NormalizeEmail(string? email)
+    {
+        return email?.Trim().ToLowerInvariant() ?? string.Empty;
+    }
+
+    private static Dictionary<string, string[]> ValidateCredentials(string email, string? password)
     {
         var errors = new Dictionary<string, string[]>();
 

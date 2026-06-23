@@ -10,6 +10,7 @@ import type {
 } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5033'
+const USER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 
 export class ApiClientError extends Error {
   public readonly apiError: ApiError
@@ -27,6 +28,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(USER_TIME_ZONE ? { 'X-Time-Zone': USER_TIME_ZONE } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },

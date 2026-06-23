@@ -6,11 +6,9 @@ public static class ApiResults
         Results.Json(ApiResponse<T>.Ok(data, traceId), statusCode: StatusCodes.Status200OK);
 
     public static IResult Created<T>(string location, T data, string traceId) =>
-        Results.Json(
-            ApiResponse<T>.Ok(data, traceId),
-            statusCode: StatusCodes.Status201Created);
+        Results.Created(location, ApiResponse<T>.Ok(data, traceId));
 
-    public static IResult NoContent(string traceId) =>
+    public static IResult EmptyOk(string traceId) =>
         Results.Json(ApiResponse<object>.Ok(new { }, traceId), statusCode: StatusCodes.Status200OK);
 
     public static IResult Error(int statusCode, ApiError error, string traceId) =>

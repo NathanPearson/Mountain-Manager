@@ -19,10 +19,11 @@ I included authentication because I wanted to close the ownership loop rather th
 
 ## Tech Stack
 
-- Backend: ASP.NET Core 8, EF Core, SQLite
-- Time handling: NodaTime
+- Backend: ASP.NET Core 8
+- Data access and persistence: EF Core with SQLite
+- Backend date/time types: NodaTime (`LocalDate` for due dates, `Instant` for audit timestamps)
 - Frontend: React, TypeScript, Vite
-- Frontend date display: Luxon
+- Frontend date formatting: Luxon
 - API documentation: OpenAPI with Scalar UI
 - Tests: xUnit integration tests with `WebApplicationFactory`
 
@@ -165,9 +166,11 @@ The API includes `traceId` for log correlation. The frontend intentionally does 
 
 I modeled due dates as calendar dates, not instants.
 
-The backend uses `NodaTime.LocalDate` and accepts/returns ISO date strings such as `2026-06-18`. A task due on June 18 should stay June 18, not shift because a browser or server converted it through a timezone. Audit fields such as `createdAt`, `updatedAt`, and `completedAt` use `NodaTime.Instant`.
+The backend uses `NodaTime.LocalDate` for task due dates and accepts/returns ISO date strings such as `2026-06-18`. The app only asks users for a date, not a time of day, because a task due on June 18 should stay June 18 instead of shifting through a browser or server timezone conversion.
 
-The frontend sends the date string from the date input directly to the API and uses Luxon only for display formatting.
+The frontend sends the date string from the date input directly to the API. It uses Luxon only to format that date string for display. Operational timestamps such as `createdAt`, `updatedAt`, and `completedAt` are separate audit timestamp fields stored as `NodaTime.Instant`.
+
+Due-date buckets use the user's browser timezone. The frontend sends the browser's IANA timezone in an `X-Time-Zone` header, and the API uses that timezone when deciding whether a task is `Overdue`, `Today`, or `Upcoming`.
 
 ## Task Ordering
 
@@ -202,4 +205,4 @@ Logging uses built-in `ILogger<T>` with structured messages around startup, auth
 - Playwright end-to-end tests for the browser flows
 - Accessibility checks and keyboard-focused UI refinements
 - Server-side pagination once task volume justifies it
-- Audit history for task changes
+- A full audit history table for task changes, beyond the current created/updated/completed timestamps

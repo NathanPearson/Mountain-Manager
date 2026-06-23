@@ -7,6 +7,8 @@ namespace MountainManager.Api.Tasks;
 
 public static class TaskEndpoints
 {
+    private const string TimeZoneHeaderName = "X-Time-Zone";
+
     public static RouteGroupBuilder MapTaskEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/tasks")
@@ -32,7 +34,7 @@ public static class TaskEndpoints
         IClock clock,
         HttpContext httpContext)
     {
-        var today = GetToday(clock);
+        var today = GetToday(clock, httpContext);
         var query = db.Tasks
             .AsNoTracking()
             .Include(task => task.Priority)
@@ -86,7 +88,7 @@ public static class TaskEndpoints
             return ApiResults.Error(StatusCodes.Status404NotFound, ApiError.NotFound("Task was not found."), httpContext.TraceIdentifier);
         }
 
-        return ApiResults.Ok(task.ToResponse(GetToday(clock)), httpContext.TraceIdentifier);
+        return ApiResults.Ok(task.ToResponse(GetToday(clock, httpContext)), httpContext.TraceIdentifier);
     }
 
     private static async Task<IResult> CreateAsync(
@@ -144,7 +146,7 @@ public static class TaskEndpoints
             task.Priority.Name,
             task.DueDate);
 
-        return ApiResults.Created($"/api/tasks/{task.Id}", task.ToResponse(GetToday(clock)), httpContext.TraceIdentifier);
+        return ApiResults.Created($"/api/tasks/{task.Id}", task.ToResponse(GetToday(clock, httpContext)), httpContext.TraceIdentifier);
     }
 
     private static async Task<IResult> UpdateAsync(
@@ -202,7 +204,7 @@ public static class TaskEndpoints
         await db.SaveChangesAsync();
 
         logger.LogInformation("Task updated for user {UserId}. TaskId: {TaskId}", currentUser.Id, id);
-        return ApiResults.Ok(task.ToResponse(GetToday(clock)), httpContext.TraceIdentifier);
+        return ApiResults.Ok(task.ToResponse(GetToday(clock, httpContext)), httpContext.TraceIdentifier);
     }
 
     private static async Task<IResult> CompleteAsync(
@@ -239,7 +241,7 @@ public static class TaskEndpoints
             id,
             request.IsCompleted);
 
-        return ApiResults.Ok(task.ToResponse(GetToday(clock)), httpContext.TraceIdentifier);
+        return ApiResults.Ok(task.ToResponse(GetToday(clock, httpContext)), httpContext.TraceIdentifier);
     }
 
     private static async Task<IResult> DeleteAsync(
@@ -263,12 +265,18 @@ public static class TaskEndpoints
         await db.SaveChangesAsync();
 
         logger.LogInformation("Task deleted for user {UserId}. TaskId: {TaskId}", currentUser.Id, id);
-        return ApiResults.NoContent(httpContext.TraceIdentifier);
+        return ApiResults.EmptyOk(httpContext.TraceIdentifier);
     }
 
-    private static LocalDate GetToday(IClock clock)
+    private static LocalDate GetToday(IClock clock, HttpContext httpContext)
     {
-        return clock.GetCurrentInstant().InZone(DateTimeZoneProviders.Tzdb.GetSystemDefault()).Date;
+        var requestedZone = httpContext.Request.Headers[TimeZoneHeaderName].FirstOrDefault();
+        var zone = string.IsNullOrWhiteSpace(requestedZone)
+            ? null
+            : DateTimeZoneProviders.Tzdb.GetZoneOrNull(requestedZone);
+
+        zone ??= DateTimeZoneProviders.Tzdb.GetSystemDefault();
+        return clock.GetCurrentInstant().InZone(zone).Date;
     }
 
     private static int GetBucketSortRank(string dueBucket) =>

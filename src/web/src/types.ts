@@ -2,7 +2,7 @@ export type Priority = 'Low' | 'Medium' | 'High' | 'Urgent'
 export type DueBucket = 'Overdue' | 'Today' | 'Upcoming' | 'Completed'
 export type TaskStatusFilter = 'all' | 'active' | 'completed'
 export type PriorityFilter = 'all' | Priority
-export type DueBucketFilter = 'all' | 'Overdue' | 'Today' | 'Upcoming'
+export type DueBucketFilter = 'all' | DueBucket
 
 export type ApiError = {
   code: string

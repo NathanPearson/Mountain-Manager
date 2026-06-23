@@ -8,6 +8,7 @@ using MountainManager.Api.Data;
 
 namespace MountainManager.Api.Tests;
 
+[Collection(ApiTestCollection.Name)]
 public sealed class TaskApiTests(ApiTestFactory factory) : IClassFixture<ApiTestFactory>
 {
     private readonly ApiTestFactory _factory = factory;
@@ -245,6 +246,25 @@ public sealed class TaskApiTests(ApiTestFactory factory) : IClassFixture<ApiTest
     }
 
     [Fact]
+    public async Task DueBucketUsesClientTimeZoneHeaderForToday()
+    {
+        await AuthenticateAsync("time-zone@example.com");
+        _client.DefaultRequestHeaders.Add("X-Time-Zone", "Pacific/Kiritimati");
+
+        var response = await _client.PostAsJsonAsync("/api/tasks", new
+        {
+            title = "Client-local today",
+            priority = "High",
+            dueDate = "2030-06-19"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var envelope = await response.ReadEnvelopeAsync<TaskResponse>();
+        envelope.Data!.DueBucket.Should().Be("Today");
+    }
+
+    [Fact]
     public async Task CrudFlowWorksForAuthenticatedUser()
     {
         await AuthenticateAsync("crud@example.com");
@@ -258,6 +278,7 @@ public sealed class TaskApiTests(ApiTestFactory factory) : IClassFixture<ApiTest
         });
 
         var created = (await createResponse.ReadEnvelopeAsync<TaskResponse>()).Data!;
+        createResponse.Headers.Location.Should().Be(new Uri($"/api/tasks/{created.Id}", UriKind.Relative));
 
         var updateResponse = await _client.PutAsJsonAsync($"/api/tasks/{created.Id}", new
         {

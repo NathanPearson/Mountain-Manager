@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using MountainManager.Api.Data;
 using NodaTime;
 
 namespace MountainManager.Api.Tests;
@@ -9,17 +12,6 @@ namespace MountainManager.Api.Tests;
 public sealed class ApiTestFactory : WebApplicationFactory<Program>
 {
     private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"mountain-manager-tests-{Guid.NewGuid():N}.db");
-
-    public ApiTestFactory()
-    {
-        Environment.SetEnvironmentVariable("ConnectionStrings__Default", $"Data Source={_databasePath}");
-        Environment.SetEnvironmentVariable("Jwt__Issuer", "MountainManager");
-        Environment.SetEnvironmentVariable("Jwt__Audience", "MountainManager");
-        Environment.SetEnvironmentVariable("Jwt__SigningKey", "development-only-signing-key-change-before-production-please");
-        Environment.SetEnvironmentVariable("Jwt__ExpirationMinutes", "60");
-        Environment.SetEnvironmentVariable("Cors__AllowedOrigins__0", "http://localhost:5173");
-        Environment.SetEnvironmentVariable("Cors__AllowedOrigins__1", "http://127.0.0.1:5173");
-    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -39,6 +31,12 @@ public sealed class ApiTestFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            services.RemoveAll<DbContextOptions<AppDbContext>>();
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                options.UseSqlite($"Data Source={_databasePath}");
+            });
+
             services.AddSingleton<IClock>(new FixedClock(Instant.FromUtc(2030, 6, 18, 12, 0)));
         });
     }
@@ -46,14 +44,6 @@ public sealed class ApiTestFactory : WebApplicationFactory<Program>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-
-        Environment.SetEnvironmentVariable("ConnectionStrings__Default", null);
-        Environment.SetEnvironmentVariable("Jwt__Issuer", null);
-        Environment.SetEnvironmentVariable("Jwt__Audience", null);
-        Environment.SetEnvironmentVariable("Jwt__SigningKey", null);
-        Environment.SetEnvironmentVariable("Jwt__ExpirationMinutes", null);
-        Environment.SetEnvironmentVariable("Cors__AllowedOrigins__0", null);
-        Environment.SetEnvironmentVariable("Cors__AllowedOrigins__1", null);
 
         try
         {
