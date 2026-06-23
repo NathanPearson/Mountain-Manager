@@ -20,7 +20,7 @@ I included authentication because I wanted to close the ownership loop rather th
 
 ## Tech Stack
 
-- Backend: ASP.NET Core 8
+- Backend: .NET 8
 - Data access and persistence: EF Core with SQLite
 - Backend date/time types: NodaTime (`LocalDate` for due dates, `Instant` for audit timestamps)
 - Frontend: React, TypeScript, Vite
